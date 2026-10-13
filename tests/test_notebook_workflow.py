@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import shutil
 from pathlib import Path
 
 import nbformat
@@ -20,6 +21,8 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 BUSINESS_EXAMPLE = PROJECT_ROOT / "data" / "business.example.json"
 INVOICE_EXAMPLE = PROJECT_ROOT / "data" / "invoice.example.json"
 NOTEBOOK_PATH = PROJECT_ROOT / "notebooks" / "create_invoice.ipynb"
+STAGED_NOTEBOOK_PATH = PROJECT_ROOT / "notebooks" / "create_staged_invoices.ipynb"
+STAGED_PROJECT_EXAMPLE = PROJECT_ROOT / "data" / "staged_project.example.json"
 
 
 def _prepared_with_number(invoice_number: str) -> PreparedInvoice:
@@ -41,6 +44,17 @@ def test_notebook_is_valid_and_uses_the_workflow() -> None:
     assert "generate_invoice" in source
     assert "PROJECT_ROOT" in source
     assert "prototype=False" in source
+
+
+def test_staged_notebook_is_valid_and_uses_staged_workflow() -> None:
+    notebook = nbformat.read(STAGED_NOTEBOOK_PATH, as_version=4)
+
+    nbformat.validate(notebook)
+    source = "\n".join(cell.source for cell in notebook.cells)
+    assert "create_deposit_invoice" in source
+    assert "record_deposit_payment" in source
+    assert "create_final_balance_invoice" in source
+    assert "INVOICE_STAGED_OPERATION" in source
 
 
 @pytest.mark.filterwarnings(
@@ -65,6 +79,29 @@ def test_notebook_executes_with_sanitised_configuration(
     )
 
     assert (tmp_path / "INV-EXAMPLE-001.pdf").is_file()
+
+
+@pytest.mark.filterwarnings(
+    "ignore:Proactor event loop does not implement add_reader family of methods "
+    "required for zmq.*:RuntimeWarning"
+)
+def test_staged_notebook_creates_a_sanitised_deposit_invoice(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    project_path = tmp_path / "project.json"
+    shutil.copyfile(STAGED_PROJECT_EXAMPLE, project_path)
+    monkeypatch.setenv("INVOICE_STAGED_OPERATION", "create_deposit")
+    monkeypatch.setenv("INVOICE_STAGED_PROJECT_PATH", str(project_path))
+    monkeypatch.setenv("INVOICE_BUSINESS_PATH", str(BUSINESS_EXAMPLE))
+    monkeypatch.setenv("INVOICE_DEPOSIT_INVOICE_PATH", str(INVOICE_EXAMPLE))
+    monkeypatch.setenv("INVOICE_OUTPUT_DIR", str(tmp_path / "output"))
+    notebook = nbformat.read(STAGED_NOTEBOOK_PATH, as_version=4)
+
+    NotebookClient(notebook, timeout=120, kernel_name="python3").execute(
+        cwd=PROJECT_ROOT
+    )
+
+    assert (tmp_path / "output" / "INV-EXAMPLE-001.pdf").is_file()
 
 
 def test_prepare_invoice_loads_sanitised_configuration() -> None:

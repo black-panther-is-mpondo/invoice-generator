@@ -1,0 +1,17 @@
+{
+  "project_id": "harbor-pine-website-2026",
+  "customer_reference": "harbor-pine",
+  "customer": {
+    "name": "Harbor & Pine Co.",
+    "email": "accounts@harbor-pine.example",
+    "phone": "+1 555 010 0184"
+  },
+  "service_description": "Website design and development",
+  "project_total": "6000.00",
+  "deposit_percentage": "50",
+  "deposit_invoice_number": null,
+  "deposit_status": "not_invoiced",
+  "deposit_payment": null,
+  "final_invoice_number": null,
+  "final_invoice_status": "not_invoiced"
+}

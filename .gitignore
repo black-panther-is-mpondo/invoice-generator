@@ -16,6 +16,7 @@ output/*
 # Private runtime data and customer-information backups; commit examples only.
 data/business.json
 data/invoice.json
+data/staged_projects/
 assets/logo.png
 data/private/
 data/**/*customer*
