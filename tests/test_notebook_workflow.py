@@ -42,6 +42,8 @@ def test_notebook_is_valid_and_uses_the_workflow() -> None:
     source = "\n".join(cell.source for cell in notebook.cells)
     assert "prepare_invoice" in source
     assert "generate_invoice" in source
+    assert "record_full_payment" in source
+    assert "create_receipt" in source
     assert "PROJECT_ROOT" in source
     assert "prototype=False" in source
 
@@ -54,6 +56,8 @@ def test_staged_notebook_is_valid_and_uses_staged_workflow() -> None:
     assert "create_deposit_invoice" in source
     assert "record_deposit_payment" in source
     assert "create_final_balance_invoice" in source
+    assert "record_final_balance_payment" in source
+    assert "create_receipt" in source
     assert "INVOICE_STAGED_OPERATION" in source
 
 
@@ -72,6 +76,7 @@ def test_notebook_executes_with_sanitised_configuration(
     monkeypatch.setenv("INVOICE_BUSINESS_PATH", str(BUSINESS_EXAMPLE))
     monkeypatch.setenv("INVOICE_INVOICE_PATH", str(INVOICE_EXAMPLE))
     monkeypatch.setenv("INVOICE_OUTPUT_DIR", str(tmp_path))
+    monkeypatch.setenv("INVOICE_PAYMENT_RECORD_DIR", str(tmp_path / "payment-records"))
     notebook = nbformat.read(NOTEBOOK_PATH, as_version=4)
 
     NotebookClient(notebook, timeout=120, kernel_name="python3").execute(
@@ -95,6 +100,8 @@ def test_staged_notebook_creates_a_sanitised_deposit_invoice(
     monkeypatch.setenv("INVOICE_BUSINESS_PATH", str(BUSINESS_EXAMPLE))
     monkeypatch.setenv("INVOICE_DEPOSIT_INVOICE_PATH", str(INVOICE_EXAMPLE))
     monkeypatch.setenv("INVOICE_OUTPUT_DIR", str(tmp_path / "output"))
+    monkeypatch.setenv("INVOICE_PAYMENT_RECORD_DIR", str(tmp_path / "payment-records"))
+    monkeypatch.setenv("INVOICE_RECEIPT_DIR", str(tmp_path / "receipts"))
     notebook = nbformat.read(STAGED_NOTEBOOK_PATH, as_version=4)
 
     NotebookClient(notebook, timeout=120, kernel_name="python3").execute(
@@ -102,6 +109,37 @@ def test_staged_notebook_creates_a_sanitised_deposit_invoice(
     )
 
     assert (tmp_path / "output" / "INV-EXAMPLE-001.pdf").is_file()
+
+
+@pytest.mark.filterwarnings(
+    "ignore:Proactor event loop does not implement add_reader family of methods "
+    "required for zmq.*:RuntimeWarning"
+)
+def test_ordinary_notebook_creates_a_fictional_receipt(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    monkeypatch.setenv("INVOICE_BUSINESS_PATH", str(BUSINESS_EXAMPLE))
+    monkeypatch.setenv("INVOICE_INVOICE_PATH", str(INVOICE_EXAMPLE))
+    monkeypatch.setenv("INVOICE_OUTPUT_DIR", str(tmp_path / "output"))
+    monkeypatch.setenv("INVOICE_PAYMENT_RECORD_DIR", str(tmp_path / "payment-records"))
+    monkeypatch.setenv("INVOICE_RECEIPT_DIR", str(tmp_path / "receipts"))
+
+    for operation in ("create_invoice", "record_payment", "create_receipt"):
+        monkeypatch.setenv("INVOICE_OPERATION", operation)
+        if operation == "record_payment":
+            monkeypatch.setenv("INVOICE_PAYMENT_AMOUNT", "4500.00")
+            monkeypatch.setenv("INVOICE_PAYMENT_DATE", "2026-10-14")
+            monkeypatch.setenv(
+                "INVOICE_PAYMENT_REFERENCE", "FICTIONAL-NOTEBOOK-PAYMENT"
+            )
+        notebook = nbformat.read(NOTEBOOK_PATH, as_version=4)
+        NotebookClient(notebook, timeout=120, kernel_name="python3").execute(
+            cwd=PROJECT_ROOT
+        )
+
+    receipt = tmp_path / "receipts" / "RCT-000001.pdf"
+    assert receipt.is_file()
+    assert len(PdfReader(receipt).pages) == 1
 
 
 def test_prepare_invoice_loads_sanitised_configuration() -> None:
@@ -114,7 +152,11 @@ def test_prepare_invoice_loads_sanitised_configuration() -> None:
 def test_workflow_generates_production_pdf_without_preview_labels(
     tmp_path: Path,
 ) -> None:
-    output = generate_invoice(_prepared_with_number("INV-NOTEBOOK-001"), tmp_path)
+    output = generate_invoice(
+        _prepared_with_number("INV-NOTEBOOK-001"),
+        tmp_path,
+        payment_record_dir=tmp_path / "payment-records",
+    )
     text = "\n".join(page.extract_text() for page in PdfReader(output).pages)
 
     assert output == tmp_path / "INV-NOTEBOOK-001.pdf"
@@ -140,11 +182,15 @@ def test_workflow_creates_output_directory_and_rejects_conflicts(
 ) -> None:
     prepared = _prepared_with_number("INV-NOTEBOOK-002")
     output_dir = tmp_path / "nested" / "output"
-    output = generate_invoice(prepared, output_dir)
+    output = generate_invoice(
+        prepared, output_dir, payment_record_dir=tmp_path / "payment-records"
+    )
 
     assert output.is_file()
     with pytest.raises(FileExistsError, match="already exists"):
-        generate_invoice(prepared, output_dir)
+        generate_invoice(
+            prepared, output_dir, payment_record_dir=tmp_path / "payment-records"
+        )
 
 
 def test_invalid_model_data_remains_rejected() -> None:

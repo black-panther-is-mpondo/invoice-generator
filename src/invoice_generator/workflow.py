@@ -8,6 +8,7 @@ from pathlib import Path
 from .calculations import InvoiceCalculation, calculate_invoice
 from .loader import load_business_config, load_invoice_config
 from .models import BusinessConfig, InvoiceConfig
+from .payment_receipts import DEFAULT_PAYMENT_RECORD_DIR, create_payment_record
 from .renderer import render_invoice
 
 
@@ -39,12 +40,20 @@ def generate_invoice(
     output_dir: str | Path = "output",
     *,
     prototype: bool = False,
+    payment_record_dir: str | Path = DEFAULT_PAYMENT_RECORD_DIR,
 ) -> Path:
-    """Render prepared inputs, preserving the renderer's no-overwrite protection."""
-    return render_invoice(
+    """Render an invoice and atomically retain its immutable payment snapshot."""
+    destination = render_invoice(
         prepared.business,
         prepared.invoice,
         prepared.calculation,
         output_dir,
         prototype=prototype,
     )
+    create_payment_record(
+        prepared.business,
+        prepared.invoice,
+        prepared.calculation,
+        payment_record_dir,
+    )
+    return destination

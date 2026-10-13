@@ -13,5 +13,6 @@
   "deposit_status": "not_invoiced",
   "deposit_payment": null,
   "final_invoice_number": null,
-  "final_invoice_status": "not_invoiced"
+  "final_invoice_status": "not_invoiced",
+  "final_payment": null
 }

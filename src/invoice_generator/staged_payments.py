@@ -25,6 +25,11 @@ from .models import (
     LineItem,
     parse_decimal_string,
 )
+from .payment_receipts import (
+    DEFAULT_PAYMENT_RECORD_DIR,
+    create_payment_record,
+    record_full_payment,
+)
 from .renderer import format_currency, render_invoice
 
 StageStatus = Literal["not_invoiced", "unpaid", "paid"]
@@ -64,6 +69,7 @@ class StagedProject(InvoiceModel):
     deposit_payment: DepositPayment | None = None
     final_invoice_number: str | None = None
     final_invoice_status: StageStatus = "not_invoiced"
+    final_payment: DepositPayment | None = None
 
     @field_validator("project_total", "deposit_percentage", mode="before")
     @classmethod
@@ -106,7 +112,10 @@ class StagedProject(InvoiceModel):
             raise ValueError("An unpaid deposit cannot include a payment record.")
 
         if self.final_invoice_number is None:
-            if self.final_invoice_status != "not_invoiced":
+            if (
+                self.final_invoice_status != "not_invoiced"
+                or self.final_payment is not None
+            ):
                 raise ValueError(
                     "A final invoice without a number must be marked not_invoiced."
                 )
@@ -116,6 +125,19 @@ class StagedProject(InvoiceModel):
             raise ValueError(
                 "The final invoice number must differ from the deposit invoice number."
             )
+        elif self.final_invoice_status == "paid":
+            if self.final_payment is None:
+                raise ValueError(
+                    "A paid final invoice requires a confirmed payment record."
+                )
+            if self.final_payment.invoice_number != self.final_invoice_number:
+                raise ValueError("The final payment must reference the final invoice.")
+            if self.final_payment.amount_received != self.remaining_balance:
+                raise ValueError(
+                    "The final payment must equal the full remaining balance."
+                )
+        elif self.final_payment is not None:
+            raise ValueError("An unpaid final invoice cannot include a payment record.")
         return self
 
     @property
@@ -151,6 +173,7 @@ def create_deposit_invoice(
     invoice_path: str | Path,
     business_path: str | Path = "data/business.json",
     output_dir: str | Path = "output",
+    payment_record_dir: str | Path = DEFAULT_PAYMENT_RECORD_DIR,
 ) -> Path:
     """Render the unpaid deposit invoice and then persist its invoice number."""
     project = load_staged_project(project_path)
@@ -160,8 +183,18 @@ def create_deposit_invoice(
     business = load_business_config(business_path)
     template = load_invoice_config(invoice_path)
     invoice = _deposit_invoice(project, template, business.currency)
+    calculation = calculate_invoice(invoice)
     destination = render_invoice(
-        business, invoice, calculate_invoice(invoice), output_dir, prototype=False
+        business, invoice, calculation, output_dir, prototype=False
+    )
+    create_payment_record(
+        business,
+        invoice,
+        calculation,
+        payment_record_dir,
+        payment_purpose=f"Upfront deposit for {project.service_description}",
+        receipt_status="DEPOSIT RECEIVED",
+        remaining_balance=project.remaining_balance,
     )
     save_staged_project(
         _updated_project(
@@ -180,6 +213,7 @@ def record_deposit_payment(
     amount_received: str,
     received_date: str | date,
     payment_reference: str | None = None,
+    payment_record_dir: str | Path = DEFAULT_PAYMENT_RECORD_DIR,
 ) -> StagedProject:
     """Manually record a full confirmed deposit payment exactly once."""
     project = load_staged_project(project_path)
@@ -207,6 +241,13 @@ def record_deposit_payment(
             "The received amount must equal the full deposit before invoicing the balance."
         )
 
+    record_full_payment(
+        payment_record_dir,
+        invoice_number,
+        amount_received,
+        received_date,
+        payment_reference,
+    )
     updated = _updated_project(project, deposit_status="paid", deposit_payment=payment)
     save_staged_project(updated, project_path)
     return updated
@@ -218,6 +259,7 @@ def create_final_balance_invoice(
     issue_date: str | date,
     business_path: str | Path = "data/business.json",
     output_dir: str | Path = "output",
+    payment_record_dir: str | Path = DEFAULT_PAYMENT_RECORD_DIR,
 ) -> Path:
     """Render the final unpaid balance only after the deposit is fully confirmed."""
     project = load_staged_project(project_path)
@@ -238,8 +280,17 @@ def create_final_balance_invoice(
     invoice = _final_balance_invoice(
         project, invoice_number, issue_date, business.currency
     )
+    calculation = calculate_invoice(invoice)
     destination = render_invoice(
-        business, invoice, calculate_invoice(invoice), output_dir, prototype=False
+        business, invoice, calculation, output_dir, prototype=False
+    )
+    create_payment_record(
+        business,
+        invoice,
+        calculation,
+        payment_record_dir,
+        payment_purpose=f"Final balance for {project.service_description}",
+        remaining_balance=Decimal("0.00"),
     )
     save_staged_project(
         _updated_project(
@@ -250,6 +301,52 @@ def create_final_balance_invoice(
         project_path,
     )
     return destination
+
+
+def record_final_balance_payment(
+    project_path: str | Path,
+    invoice_number: str,
+    amount_received: str,
+    received_date: str | date,
+    payment_reference: str | None = None,
+    payment_record_dir: str | Path = DEFAULT_PAYMENT_RECORD_DIR,
+) -> StagedProject:
+    """Manually record the final invoice only when its full balance is confirmed."""
+    project = load_staged_project(project_path)
+    if project.final_invoice_number is None:
+        raise ValueError("Create the final-balance invoice before recording a payment.")
+    if project.final_invoice_status == "paid" or project.final_payment is not None:
+        raise ValueError(
+            "A final-balance payment has already been recorded for this project."
+        )
+    if invoice_number != project.final_invoice_number:
+        raise ValueError("The payment invoice number does not match the final invoice.")
+
+    payment = DepositPayment.model_validate(
+        {
+            "invoice_number": invoice_number,
+            "amount_received": amount_received,
+            "received_date": received_date,
+            "payment_reference": payment_reference,
+        }
+    )
+    if payment.amount_received != project.remaining_balance:
+        raise ValueError(
+            "The received amount must equal the full remaining balance before recording payment."
+        )
+
+    record_full_payment(
+        payment_record_dir,
+        invoice_number,
+        amount_received,
+        received_date,
+        payment_reference,
+    )
+    updated = _updated_project(
+        project, final_invoice_status="paid", final_payment=payment
+    )
+    save_staged_project(updated, project_path)
+    return updated
 
 
 def _deposit_invoice(

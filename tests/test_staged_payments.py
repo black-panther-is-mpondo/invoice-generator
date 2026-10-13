@@ -16,6 +16,7 @@ from invoice_generator.staged_payments import (
     create_final_balance_invoice,
     load_staged_project,
     record_deposit_payment,
+    record_final_balance_payment,
     save_staged_project,
 )
 
@@ -68,7 +69,11 @@ def _create_deposit(
     project_path = _write_project(tmp_path)
     template_path = _write_invoice_template(tmp_path, valid_invoice_data)
     output = create_deposit_invoice(
-        project_path, template_path, BUSINESS_EXAMPLE, tmp_path / "output"
+        project_path,
+        template_path,
+        BUSINESS_EXAMPLE,
+        tmp_path / "output",
+        tmp_path / "payment-records",
     )
     return project_path, output
 
@@ -158,6 +163,7 @@ def test_records_full_deposit_once_and_persists_across_sessions(
         "1750.00",
         date(2026, 10, 13),
         "PAYMENT-EXAMPLE-001",
+        tmp_path / "payment-records",
     )
     reloaded = load_staged_project(project_path)
 
@@ -167,7 +173,13 @@ def test_records_full_deposit_once_and_persists_across_sessions(
     assert reloaded.deposit_payment.payment_reference == "PAYMENT-EXAMPLE-001"
 
     with pytest.raises(ValueError, match="already been recorded"):
-        record_deposit_payment(project_path, "INV-DEP-001", "1750.00", "2026-10-13")
+        record_deposit_payment(
+            project_path,
+            "INV-DEP-001",
+            "1750.00",
+            "2026-10-13",
+            payment_record_dir=tmp_path / "payment-records",
+        )
 
 
 def test_rejects_partial_or_mismatched_deposit_payment(
@@ -176,9 +188,21 @@ def test_rejects_partial_or_mismatched_deposit_payment(
     project_path, _ = _create_deposit(tmp_path, valid_invoice_data)
 
     with pytest.raises(ValueError, match="full deposit"):
-        record_deposit_payment(project_path, "INV-DEP-001", "1000.00", "2026-10-13")
+        record_deposit_payment(
+            project_path,
+            "INV-DEP-001",
+            "1000.00",
+            "2026-10-13",
+            payment_record_dir=tmp_path / "payment-records",
+        )
     with pytest.raises(ValueError, match="does not match"):
-        record_deposit_payment(project_path, "INV-WRONG-001", "1750.00", "2026-10-13")
+        record_deposit_payment(
+            project_path,
+            "INV-WRONG-001",
+            "1750.00",
+            "2026-10-13",
+            payment_record_dir=tmp_path / "payment-records",
+        )
 
 
 def test_prevents_final_invoice_before_full_deposit_payment(
@@ -200,7 +224,13 @@ def test_creates_final_balance_after_confirmed_deposit(
     tmp_path: Path, valid_invoice_data: dict[str, object]
 ) -> None:
     project_path, deposit_output = _create_deposit(tmp_path, valid_invoice_data)
-    record_deposit_payment(project_path, "INV-DEP-001", "1750.00", "2026-10-13")
+    record_deposit_payment(
+        project_path,
+        "INV-DEP-001",
+        "1750.00",
+        "2026-10-13",
+        payment_record_dir=tmp_path / "payment-records",
+    )
 
     final_output = create_final_balance_invoice(
         project_path,
@@ -208,6 +238,7 @@ def test_creates_final_balance_after_confirmed_deposit(
         "2026-10-14",
         BUSINESS_EXAMPLE,
         tmp_path / "output",
+        tmp_path / "payment-records",
     )
     project = load_staged_project(project_path)
     text = "\n".join(page.extract_text() for page in PdfReader(final_output).pages)
@@ -234,7 +265,13 @@ def test_rejects_final_invoice_number_matching_the_deposit(
     tmp_path: Path, valid_invoice_data: dict[str, object]
 ) -> None:
     project_path, _ = _create_deposit(tmp_path, valid_invoice_data)
-    record_deposit_payment(project_path, "INV-DEP-001", "1750.00", "2026-10-13")
+    record_deposit_payment(
+        project_path,
+        "INV-DEP-001",
+        "1750.00",
+        "2026-10-13",
+        payment_record_dir=tmp_path / "payment-records",
+    )
 
     with pytest.raises(ValueError, match="must differ"):
         create_final_balance_invoice(
@@ -244,6 +281,40 @@ def test_rejects_final_invoice_number_matching_the_deposit(
             BUSINESS_EXAMPLE,
             tmp_path / "output",
         )
+
+
+def test_records_full_final_balance_payment(
+    tmp_path: Path, valid_invoice_data: dict[str, object]
+) -> None:
+    project_path, _ = _create_deposit(tmp_path, valid_invoice_data)
+    records = tmp_path / "payment-records"
+    record_deposit_payment(
+        project_path,
+        "INV-DEP-001",
+        "1750.00",
+        "2026-10-13",
+        payment_record_dir=records,
+    )
+    create_final_balance_invoice(
+        project_path,
+        "INV-FINAL-001",
+        "2026-10-14",
+        BUSINESS_EXAMPLE,
+        tmp_path / "output",
+        records,
+    )
+
+    project = record_final_balance_payment(
+        project_path,
+        "INV-FINAL-001",
+        "1750.00",
+        "2026-10-16",
+        payment_record_dir=records,
+    )
+
+    assert project.final_invoice_status == "paid"
+    assert project.final_payment is not None
+    assert project.final_payment.amount_received == Decimal("1750.00")
 
 
 def test_deposit_template_customer_must_match_project(

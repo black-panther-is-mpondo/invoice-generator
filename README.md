@@ -8,6 +8,7 @@ Invoice Generator creates professional A4 PDF invoices from validated JSON confi
 - JSON validation for business details, customer details, dates, and monetary values.
 - Lato-based A4 PDF rendering with dynamic line-item pagination.
 - No-overwrite protection for generated invoices.
+- Private immutable payment snapshots, explicit full-payment records, and one-page PDF receipts.
 - Jupyter notebooks for ordinary and two-stage invoice workflows.
 - Sanitised example data and a neutral example logo for safe public use.
 
@@ -63,7 +64,7 @@ Set `business.logo_path` to your own local image. The tracked `assets/example-lo
 
 ## Generate an Ordinary Invoice
 
-Open `notebooks/create_invoice.ipynb` in VS Code or Jupyter, select the project Python kernel, and run all cells. The notebook loads the local private files by default and writes a PDF into `output/`; it never replaces an existing invoice file.
+Open `notebooks/create_invoice.ipynb` in VS Code or Jupyter, select the project Python kernel, and run all cells. Its default `create_invoice` operation writes a PDF into `output/` and saves an immutable snapshot in private `data/payment_records/`; it never replaces an existing invoice file.
 
 The same workflow is available from Python:
 
@@ -75,6 +76,12 @@ pdf_path = generate_invoice(prepared)
 ```
 
 For an isolated example run, pass the two tracked example JSON paths to `prepare_invoice` and a separate output directory to `generate_invoice`.
+
+## Payments And Receipts
+
+The notebooks do not process bank transactions. After independently confirming payment, select `record_payment` for an ordinary invoice and provide the exact full invoice amount and received date. Partial payments and overpayments are rejected. Select `create_receipt` only after that confirmation; it creates a separate one-page A4 receipt PDF, or recovers the same receipt after a failed render. Receipt numbers are assigned once from the private, atomic payment-record store and are never reused.
+
+The private snapshot includes the issued invoice, business details, calculated total, and payment purpose. A later edit to source JSON cannot alter a recorded payment or receipt. Keep `data/payment_records/` private and ignored by Git.
 
 ## Staged Payments
 
@@ -88,10 +95,12 @@ The staged notebook has four configurable operations:
 - `create_deposit` creates one unpaid deposit invoice using the private invoice template.
 - `record_deposit` persists a manually confirmed payment only when the configured invoice number and exact deposit amount match.
 - `create_balance` creates one unpaid final-balance invoice only after the full deposit is recorded, with a due date two calendar days after its explicit issue date.
+- `record_balance` records a full confirmed final-balance payment.
+- `create_receipt` creates or recovers the receipt for a confirmed deposit or final payment.
 
 Generating a PDF never marks it paid or processes a bank transaction. Partial deposits are not treated as settled. The final operation requires an explicit new invoice number and issue date; its due date is automatically two calendar days later. It rejects duplicate numbers, duplicate stage invoices, and existing PDF paths. The final invoice includes the original deposit invoice reference and requests only the calculated remaining balance.
 
-Private staged records, customer details, payment references, and temporary previews are ignored by Git. Do not put real project or payment data into the tracked example.
+Private staged records, payment records, customer details, payment references, receipts, and temporary previews are ignored by Git. Do not put real project or payment data into the tracked example.
 
 ## Development
 
@@ -111,7 +120,7 @@ uv run pytest
 
 ## Git Privacy
 
-`.gitignore` excludes local JSON configuration, private staged-project records, the private logo, generated PDFs, Python environments, caches, notebook checkpoints, backup files, customer-information files, and local secrets. Generic examples, source code, tests, documentation, the layout specification, and `output/.gitkeep` remain eligible for tracking.
+`.gitignore` excludes local JSON configuration, private staged-project and payment records, the private logo, generated PDFs, Python environments, caches, notebook checkpoints, backup files, customer-information files, and local secrets. Generic examples, source code, tests, documentation, the layout specification, and `output/.gitkeep` remain eligible for tracking.
 
 `.gitkeep` preserves the otherwise-empty `output/` directory when a clone is created. It is the only allowed tracked file in that directory.
 

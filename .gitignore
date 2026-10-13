@@ -17,6 +17,8 @@ output/*
 data/business.json
 data/invoice.json
 data/staged_projects/
+data/payment_records/
+data/receipts/
 assets/logo.png
 data/private/
 data/**/*customer*

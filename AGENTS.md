@@ -7,7 +7,7 @@ This repository is a Python-based A4 PDF invoice generator driven by JSON config
 The normal local workflow is:
 
 1. Maintain private `data/business.json` and `data/invoice.json`.
-2. Use `notebooks/create_invoice.ipynb` for ordinary invoices, or maintain a private staged-project record and use `notebooks/create_staged_invoices.ipynb` for one deposit plus one final balance.
+2. Use `notebooks/create_invoice.ipynb` for ordinary invoices, or maintain a private staged-project record and use `notebooks/create_staged_invoices.ipynb` for one deposit plus one final balance. Use their explicit payment and receipt operations only after manually confirming a full payment.
 3. Run all notebook cells.
 4. Find the generated PDF in `output/`.
 
@@ -38,7 +38,7 @@ uv run pytest
 ## Repository Structure
 
 - `assets/`: Local private logo (ignored) and the tracked neutral example logo.
-- `data/`: Ignored private runtime configuration and staged-project records, plus tracked fictional examples.
+- `data/`: Ignored private runtime configuration, staged-project records, and payment records, plus tracked fictional examples.
 - `notebooks/`: User-facing ordinary and staged-invoice orchestration notebooks.
 - `output/`: Ignored generated invoices; `output/.gitkeep` preserves the directory.
 - `references/invoice_layout_spec.json`: Authoritative public numerical layout specification.
@@ -49,7 +49,7 @@ Resolve application-relative paths from the repository root, not the terminal wo
 
 ## Data and Privacy
 
-`data/business.json`, `data/invoice.json`, `data/staged_projects/`, and `assets/logo.png` are private local files. Do not modify, delete, rename, print, or commit them without explicit user approval. They may contain business, banking, customer, payment, and branding information.
+`data/business.json`, `data/invoice.json`, `data/staged_projects/`, `data/payment_records/`, and `assets/logo.png` are private local files. Do not modify, delete, rename, print, or commit them without explicit user approval. They may contain business, banking, customer, payment, receipt, and branding information.
 
 Use `data/business.example.json`, `data/invoice.example.json`, `data/staged_project.example.json`, and `assets/example-logo.png` for public examples and tests. Keep all example business, customer, contact, banking, payment, and invoice values fictional.
 
@@ -64,6 +64,10 @@ Calculate money with `Decimal`; do not use binary floating point. Do not require
 ## Staged Payments
 
 Support one deposit and one final-balance invoice through `src/invoice_generator/staged_payments.py`. Use the existing invoice renderer and models; do not duplicate PDF layout or ordinary calculation code. A generated deposit invoice is unpaid until a user explicitly records a full confirmed payment in the private project record. Partial payments do not unlock final-balance creation. Require a new invoice number and explicit issue date for the final balance; calculate its due date two calendar days later.
+
+## Payment Receipts
+
+Every issued invoice has an immutable private snapshot in `data/payment_records/`, written atomically after its PDF is created. Payments are manual confirmations only and must equal the full snapshot total. The same record stores the confirmed payment and its permanently assigned receipt number. Receipt rendering is idempotent: a failed render can be retried without allocating a second receipt number. Keep payment records private and use temporary directories in tests.
 
 ## Layout Requirements
 
