@@ -51,7 +51,7 @@ Copy-Item data/business.example.json data/business.json
 Copy-Item data/invoice.example.json data/invoice.json
 ```
 
-Replace the copied values with your own business, banking, customer, and invoice details. `quantity`, `unit_price`, and discount `amount` must be decimal strings, not JSON numbers. The `discount` field may be `null`, a fixed amount, or a percentage:
+Replace the copied values with your own business, banking, customer, and invoice details. `quantity`, `unit_price`, and discount `amount` must be decimal strings, not JSON numbers. For a new invoice, omit `due_date`; it is calculated as two calendar days after `issue_date`. An explicit due date is retained for an existing issued invoice. The `discount` field may be `null`, a fixed amount, or a percentage:
 
 ```json
 {"type": "percentage", "amount": "10"}
@@ -87,9 +87,9 @@ The staged notebook has four configurable operations:
 - `summary` validates the record and shows amounts without making changes.
 - `create_deposit` creates one unpaid deposit invoice using the private invoice template.
 - `record_deposit` persists a manually confirmed payment only when the configured invoice number and exact deposit amount match.
-- `create_balance` creates one unpaid final-balance invoice only after the full deposit is recorded.
+- `create_balance` creates one unpaid final-balance invoice only after the full deposit is recorded, with a due date two calendar days after its explicit issue date.
 
-Generating a PDF never marks it paid or processes a bank transaction. Partial deposits are not treated as settled. The final operation requires an explicit new invoice number, issue date, and agreed due date; it rejects duplicate numbers, duplicate stage invoices, and existing PDF paths. The final invoice includes the original deposit invoice reference and requests only the calculated remaining balance.
+Generating a PDF never marks it paid or processes a bank transaction. Partial deposits are not treated as settled. The final operation requires an explicit new invoice number and issue date; its due date is automatically two calendar days later. It rejects duplicate numbers, duplicate stage invoices, and existing PDF paths. The final invoice includes the original deposit invoice reference and requests only the calculated remaining balance.
 
 Private staged records, customer details, payment references, and temporary previews are ignored by Git. Do not put real project or payment data into the tracked example.
 

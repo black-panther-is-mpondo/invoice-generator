@@ -8,6 +8,8 @@ from typing import Literal, Self
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
+from .dates import due_date_for_issue_date
+
 
 def parse_decimal_string(value: object) -> Decimal:
     """Accept only finite decimal strings so JSON money never becomes a float."""
@@ -102,7 +104,7 @@ class Discount(InvoiceModel):
 class InvoiceConfig(InvoiceModel):
     invoice_number: str = Field(min_length=1)
     issue_date: date
-    due_date: date
+    due_date: date | None = None
     customer: Customer
     items: list[LineItem] = Field(min_length=1)
     discount: Discount | None = None
@@ -110,6 +112,9 @@ class InvoiceConfig(InvoiceModel):
 
     @model_validator(mode="after")
     def validate_dates(self) -> Self:
+        if self.due_date is None:
+            self.due_date = due_date_for_issue_date(self.issue_date)
+        assert self.due_date is not None
         if self.due_date < self.issue_date:
             raise ValueError("due_date must be on or after issue_date")
         return self

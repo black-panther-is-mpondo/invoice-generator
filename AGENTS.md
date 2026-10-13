@@ -57,13 +57,13 @@ Do not hardcode banking or customer information. Do not commit generated PDFs, v
 
 ## Invoice Contract
 
-An invoice includes an invoice number, issue and due dates, customer data, line items, an optional discount, and optional notes. Monetary input values are decimal strings in JSON. The discount may be `null`, fixed, or percentage-based.
+An invoice includes an invoice number, issue date, customer data, line items, an optional discount, and optional notes. Monetary input values are decimal strings in JSON. New invoices calculate `due_date` as two calendar days after `issue_date` when it is omitted; explicit due dates are preserved for issued invoices. The discount may be `null`, fixed, or percentage-based.
 
 Calculate money with `Decimal`; do not use binary floating point. Do not require calculated totals in input JSON. Preserve no-overwrite output behavior.
 
 ## Staged Payments
 
-Support one deposit and one final-balance invoice through `src/invoice_generator/staged_payments.py`. Use the existing invoice renderer and models; do not duplicate PDF layout or ordinary calculation code. A generated deposit invoice is unpaid until a user explicitly records a full confirmed payment in the private project record. Partial payments do not unlock final-balance creation. Require a new invoice number and explicit issue and due dates for the final balance; do not infer business facts.
+Support one deposit and one final-balance invoice through `src/invoice_generator/staged_payments.py`. Use the existing invoice renderer and models; do not duplicate PDF layout or ordinary calculation code. A generated deposit invoice is unpaid until a user explicitly records a full confirmed payment in the private project record. Partial payments do not unlock final-balance creation. Require a new invoice number and explicit issue date for the final balance; calculate its due date two calendar days later.
 
 ## Layout Requirements
 

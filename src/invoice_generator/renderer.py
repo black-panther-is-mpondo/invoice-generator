@@ -222,14 +222,17 @@ def _draw_first_page(
     rows = list(_expanded_rows(calculation.line_items))
     total_height = sum(row.height for row in rows)
     reference_height = REFERENCE_ROW_COUNT * ROW_HEIGHT
+    note_lines = _wrap_notes(invoice.notes) if invoice.notes else ()
+    rows_bottom = FIRST_ROW_TOP + total_height - ROW_SEPARATOR_GAP
     if (
         total_height <= reference_height
         and invoice.discount is None
-        and not invoice.notes
+        and _notes_fit(note_lines, rows_bottom)
     ):
         _draw_items_heading(canvas, invoice, TABLE_HEADER_TOP)
         _draw_rows(canvas, rows, FIRST_ROW_TOP, business.currency)
         _draw_reference_summary(canvas, business, invoice, calculation)
+        _draw_notes(canvas, note_lines, rows_bottom)
         return
 
     remaining_rows = _draw_rows_that_fit(
@@ -629,26 +632,9 @@ def _draw_dynamic_summary(
     panel_top = subtotal_y + 102.89
     _draw_payment_panel(canvas, business, invoice, panel_top)
     _draw_payment_terms(canvas, business, invoice, panel_top + 161.01)
-    if invoice.notes:
-        _text(
-            canvas,
-            LEFT,
-            panel_top + 205.0,
-            "NOTES",
-            FONT_BOLD,
-            TERMS_HEADING_SIZE,
-            MUTED,
-        )
-        _text(
-            canvas,
-            LEFT,
-            panel_top + 226.0,
-            invoice.notes,
-            FONT_REGULAR,
-            TERMS_TEXT_SIZE,
-            INK,
-            word_spacing=WORD_SPACING,
-        )
+    _draw_notes(
+        canvas, _wrap_notes(invoice.notes) if invoice.notes else (), panel_top + 189.0
+    )
 
 
 def _draw_totals(
@@ -857,26 +843,6 @@ def _draw_payment_terms(
         INK,
         word_spacing=WORD_SPACING,
     )
-    if invoice.notes:
-        _text(
-            canvas,
-            LEFT,
-            heading_top + 39.0,
-            "NOTES",
-            FONT_BOLD,
-            TERMS_HEADING_SIZE,
-            MUTED,
-        )
-        _text(
-            canvas,
-            LEFT,
-            heading_top + 60.0,
-            invoice.notes,
-            FONT_REGULAR,
-            TERMS_TEXT_SIZE,
-            INK,
-            word_spacing=WORD_SPACING,
-        )
 
 
 def _draw_footer(canvas: Canvas, business: BusinessConfig, prototype: bool) -> None:
@@ -965,6 +931,57 @@ def _wrap_description(value: str) -> tuple[str, ...]:
     if current:
         lines.append(current)
     return tuple(lines)
+
+
+def _wrap_notes(value: str) -> tuple[str, ...]:
+    """Wrap notes using their actual font metrics before assigning page space."""
+    return _wrap_text(value, CONTENT_WIDTH, FONT_REGULAR, TERMS_TEXT_SIZE)
+
+
+def _wrap_text(
+    value: str, maximum_width: float, font: str, size: float
+) -> tuple[str, ...]:
+    words = value.split()
+    if not words:
+        return ()
+    lines: list[str] = []
+    current = ""
+    for word in words:
+        candidate = word if not current else f"{current} {word}"
+        if current and _text_width(candidate, font, size, WORD_SPACING) > maximum_width:
+            lines.append(current)
+            current = word
+        else:
+            current = candidate
+    if current:
+        lines.append(current)
+    return tuple(lines)
+
+
+def _notes_fit(lines: tuple[str, ...], rows_bottom: float) -> bool:
+    if not lines:
+        return True
+    first_baseline = rows_bottom + 37.0
+    last_baseline = first_baseline + (len(lines) - 1) * ROW_DESCRIPTION_LEADING
+    return last_baseline <= SUBTOTAL_Y - ROW_SEPARATOR_GAP
+
+
+def _draw_notes(canvas: Canvas, lines: tuple[str, ...], rows_bottom: float) -> None:
+    if not lines:
+        return
+    heading_top = rows_bottom + 16.0
+    _text(canvas, LEFT, heading_top, "NOTES", FONT_BOLD, TERMS_HEADING_SIZE, MUTED)
+    for index, line in enumerate(lines):
+        _text(
+            canvas,
+            LEFT,
+            heading_top + 21.0 + index * ROW_DESCRIPTION_LEADING,
+            line,
+            FONT_REGULAR,
+            TERMS_TEXT_SIZE,
+            INK,
+            word_spacing=WORD_SPACING,
+        )
 
 
 def _split_long_word(value: str, maximum_width: float) -> tuple[str, ...]:

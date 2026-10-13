@@ -11,6 +11,7 @@ from typing import Literal
 from pydantic import Field, field_validator, model_validator
 
 from .calculations import calculate_invoice, round_money
+from .dates import due_date_for_issue_date
 from .loader import (
     load_business_config,
     load_invoice_config,
@@ -215,7 +216,6 @@ def create_final_balance_invoice(
     project_path: str | Path,
     invoice_number: str,
     issue_date: str | date,
-    due_date: str | date,
     business_path: str | Path = "data/business.json",
     output_dir: str | Path = "output",
 ) -> Path:
@@ -236,7 +236,7 @@ def create_final_balance_invoice(
 
     business = load_business_config(business_path)
     invoice = _final_balance_invoice(
-        project, invoice_number, issue_date, due_date, business.currency
+        project, invoice_number, issue_date, business.currency
     )
     destination = render_invoice(
         business, invoice, calculate_invoice(invoice), output_dir, prototype=False
@@ -265,7 +265,7 @@ def _deposit_invoice(
     return InvoiceConfig(
         invoice_number=template.invoice_number,
         issue_date=template.issue_date,
-        due_date=template.due_date,
+        due_date=due_date_for_issue_date(template.issue_date),
         customer=project.customer,
         items=[
             LineItem(
@@ -281,9 +281,9 @@ def _deposit_invoice(
             f"Full agreed project value: {format_currency(project.project_total, currency)}. "
             f"Upfront deposit: {project.deposit_percentage:g}% "
             f"({format_currency(project.deposit_amount, currency)}). "
-            f"Balance remaining after this deposit: "
+            f"Remaining balance after the deposit: "
             f"{format_currency(project.remaining_balance, currency)}. "
-            "This deposit is required before website development begins."
+            "The deposit is required before website design and development begins."
         ),
     )
 
@@ -292,14 +292,12 @@ def _final_balance_invoice(
     project: StagedProject,
     invoice_number: str,
     issue_date: str | date,
-    due_date: str | date,
     currency: str,
 ) -> InvoiceConfig:
     assert project.deposit_invoice_number is not None
     return InvoiceConfig(
         invoice_number=invoice_number,
         issue_date=issue_date,
-        due_date=due_date,
         customer=project.customer,
         items=[
             LineItem(

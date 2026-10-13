@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 import json
+from datetime import date
 from decimal import Decimal
 
 import pytest
 from pydantic import ValidationError
 
+from invoice_generator.dates import due_date_for_issue_date
 from invoice_generator.loader import load_invoice_config, load_json
 from invoice_generator.models import BusinessConfig, InvoiceConfig
 
@@ -126,3 +128,35 @@ def test_loads_sanitised_invoice_example() -> None:
     invoice = load_invoice_config("data/invoice.example.json")
 
     assert invoice.invoice_number == "INV-EXAMPLE-001"
+
+
+@pytest.mark.parametrize(
+    ("issue_date", "due_date"),
+    [
+        ("2026-10-13", "2026-10-15"),
+        ("2026-10-30", "2026-11-01"),
+        ("2026-12-31", "2027-01-02"),
+        ("2028-02-28", "2028-03-01"),
+        ("2027-02-28", "2027-03-02"),
+    ],
+)
+def test_due_date_uses_two_calendar_days(issue_date: str, due_date: str) -> None:
+    assert due_date_for_issue_date(
+        date.fromisoformat(issue_date)
+    ) == date.fromisoformat(due_date)
+
+
+def test_uses_automatic_due_date_when_omitted(
+    valid_invoice_data: dict[str, object],
+) -> None:
+    valid_invoice_data.pop("due_date")
+
+    assert InvoiceConfig.model_validate(valid_invoice_data).due_date == date(
+        2026, 10, 15
+    )
+
+
+def test_preserves_explicit_due_date(valid_invoice_data: dict[str, object]) -> None:
+    assert InvoiceConfig.model_validate(valid_invoice_data).due_date == date(
+        2026, 10, 27
+    )

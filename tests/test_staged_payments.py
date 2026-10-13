@@ -129,7 +129,10 @@ def test_creates_unpaid_deposit_invoice_and_persists_it(
     assert project.deposit_payment is None
     assert "R 1,750.00" in text
     assert "Full agreed project value" in text
-    assert "This deposit is required before website development begins" in text
+    assert (
+        "The deposit is required before website design and development begins"
+        in " ".join(text.split())
+    )
 
 
 def test_rejects_duplicate_deposit_invoice_creation(
@@ -188,7 +191,6 @@ def test_prevents_final_invoice_before_full_deposit_payment(
             project_path,
             "INV-FINAL-001",
             "2026-10-14",
-            "2026-10-28",
             BUSINESS_EXAMPLE,
             tmp_path / "output",
         )
@@ -204,7 +206,6 @@ def test_creates_final_balance_after_confirmed_deposit(
         project_path,
         "INV-FINAL-001",
         "2026-10-14",
-        "2026-10-28",
         BUSINESS_EXAMPLE,
         tmp_path / "output",
     )
@@ -214,6 +215,7 @@ def test_creates_final_balance_after_confirmed_deposit(
     assert deposit_output.name != final_output.name
     assert project.final_invoice_number == "INV-FINAL-001"
     assert project.final_invoice_status == "unpaid"
+    assert "16 October 2026" in text
     assert "final outstanding balance" in " ".join(text.split())
     assert "deposit invoice INV-DEP-001" in text
     assert "R 1,750.00" in text
@@ -223,7 +225,6 @@ def test_creates_final_balance_after_confirmed_deposit(
             project_path,
             "INV-FINAL-002",
             "2026-10-14",
-            "2026-10-28",
             BUSINESS_EXAMPLE,
             tmp_path / "output",
         )
@@ -240,7 +241,6 @@ def test_rejects_final_invoice_number_matching_the_deposit(
             project_path,
             "INV-DEP-001",
             "2026-10-14",
-            "2026-10-28",
             BUSINESS_EXAMPLE,
             tmp_path / "output",
         )

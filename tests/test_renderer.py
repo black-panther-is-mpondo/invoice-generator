@@ -22,6 +22,7 @@ from invoice_generator.layout import (
     PAGE_HEIGHT,
     PAGE_WIDTH,
     RIGHT,
+    TERMS_TEXT_SIZE,
     TOTAL_VALUE_SIZE,
     TYPOGRAPHY_SCALE,
     WORD_SPACING,
@@ -30,6 +31,7 @@ from invoice_generator.models import BusinessConfig, InvoiceConfig
 from invoice_generator.renderer import (
     _text_width,
     _wrap_description,
+    _wrap_notes,
     invoice_filename,
     register_lato_fonts,
     render_invoice,
@@ -177,6 +179,30 @@ def test_supports_long_descriptions(
     output = _render(valid_business_data, valid_invoice_data, tmp_path)
 
     assert "Extended design requirement" in _pdf_text(output)
+
+
+def test_short_invoice_notes_fit_once_on_the_reference_page(
+    valid_business_data: dict[str, object],
+    valid_invoice_data: dict[str, object],
+    tmp_path: Path,
+) -> None:
+    valid_invoice_data["notes"] = (
+        "Full agreed project value: R 3,500.00. Upfront deposit: 50% (R 1,750.00). "
+        "Remaining balance after the deposit: R 1,750.00."
+    )
+    output = _render(valid_business_data, valid_invoice_data, tmp_path)
+    reader = PdfReader(output)
+    text = " ".join(_pdf_text(output).split())
+
+    assert len(reader.pages) == 1
+    assert text.count("NOTES") == 1
+    assert "Full agreed project value" in text
+    assert "TOTAL DUE" in text
+    assert all(
+        _text_width(line, "Lato-Regular", TERMS_TEXT_SIZE, WORD_SPACING)
+        <= CONTENT_WIDTH
+        for line in _wrap_notes(valid_invoice_data["notes"])
+    )
 
 
 def test_rejects_existing_output_file(
