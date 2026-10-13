@@ -1,0 +1,33 @@
+# Python environments, caches, and tooling
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# Jupyter runtime files
+.ipynb_checkpoints/
+
+# Generated invoices; retain the directory in fresh clones.
+output/*
+!output/.gitkeep
+
+# Private runtime data and customer-information backups; commit examples only.
+data/business.json
+data/invoice.json
+assets/logo.png
+data/private/
+data/**/*customer*
+data/**/*client*
+*.bak
+*.backup
+*~
+
+# Local secrets and environment configuration.
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+secrets/

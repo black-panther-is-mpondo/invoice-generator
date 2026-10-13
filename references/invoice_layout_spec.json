@@ -1,0 +1,438 @@
+{
+  "spec_version": "1.1",
+  "source": "Approved Invoice Generator layout; the numerical layout is the source of truth.",
+  "measurement_conventions": {
+    "unit": "pt",
+    "one_point_in_inch": 0.013888888888888888,
+    "coordinate_system": "top-left origin; x grows right; y grows down",
+    "reportlab_conversion": "For text, use canvas.drawString(x, page_height - baseline_top_pt, value); for rectangles, use canvas.rect(x, page_height - top_pt - height_pt, width_pt, height_pt, ...); for images use canvas.drawImage(..., y=page_height-top_pt-height_pt, ...).",
+    "text_y": "baseline_top_pt is the text baseline measured from PDF page top, NOT the top of glyph bounding box",
+    "right_alignment": "Where right_pt is given, use the corresponding ReportLab right-aligned draw method (e.g. drawRightString)."
+  },
+  "page": {
+    "format": "A4 portrait",
+    "width_pt": 595.28,
+    "height_pt": 841.89,
+    "left_margin_pt": 48.0,
+    "right_edge_pt": 547.28,
+    "content_width_pt": 499.28,
+    "footer_baseline_pt": 797.9
+  },
+  "colors": {
+    "ink": "#141514",
+    "muted": "#666B68",
+    "hairline": "#DDE0DC",
+    "table_header": "#F4F5F3",
+    "total_box": "#F4F5F3",
+    "payment_box": "#F7F8F6",
+    "paper": "#FFFFFF"
+  },
+  "fonts": {
+    "required_family": "Lato",
+    "faces": [
+      "Lato-Regular",
+      "Lato-Semibold",
+      "Lato-Bold",
+      "Lato-Black"
+    ],
+    "fallback_policy": "If Lato is unavailable, find and register it before comparing the design; Helvetica substitution changes text widths and appearance. Do not package/share proprietary or external font files."
+  },
+  "refinement_a": {
+    "typography_scale": 0.92,
+    "logo_scale": 0.88,
+    "word_spacing_pt": 0.5,
+    "element_gap_adjustment_pt": 4.0,
+    "notes": "Typography is reduced by 8% for normal display and body text. Small labels retain their approved readable sizes. Word spacing applies only to natural multi-word content, never to letter-spaced labels, identifiers, email addresses, account numbers, or monetary values."
+  },
+  "elements": {
+    "header": {
+      "top_rule": {
+        "type": "rect",
+        "left_pt": 48.0,
+        "top_pt": 47.0,
+        "width_pt": 499.28,
+        "height_pt": 2.0,
+        "fill": "ink"
+      },
+      "logo": {
+        "left_pt": 48.0,
+        "top_pt": 80.4,
+        "width_pt": 61.6,
+        "height_pt": 52.096,
+        "fit": "contain",
+        "preserve_aspect_ratio": true
+      },
+      "brand_name": {
+        "left_pt": 136.0,
+        "baseline_top_pt": 90.0,
+        "font": "Lato-Black",
+        "size_pt": 15.36,
+        "color": "ink",
+        "text": "EXAMPLE"
+      },
+      "brand_descriptor": {
+        "left_pt": 136.0,
+        "baseline_top_pt": 106.0,
+        "font": "Lato-Bold",
+        "size_pt": 8.74,
+        "color": "ink",
+        "text": "C R E A T I V E  W O R K S"
+      },
+      "business_email": {
+        "left_pt": 136.0,
+        "baseline_top_pt": 124.0,
+        "font": "Lato-Regular",
+        "size_pt": 9.0,
+        "color": "muted",
+        "source": "business.email"
+      },
+      "business_whatsapp": {
+        "left_pt": 136.0,
+        "baseline_top_pt": 139.0,
+        "font": "Lato-Regular",
+        "size_pt": 9.0,
+        "color": "muted",
+        "source": "business.whatsapp",
+        "prefix": "WhatsApp  "
+      },
+      "title": {
+        "right_pt": 547.28,
+        "baseline_top_pt": 91.0,
+        "font": "Lato-Black",
+        "size_pt": 29.44,
+        "color": "ink",
+        "text": "INVOICE"
+      },
+      "invoice_number": {
+        "right_pt": 547.28,
+        "baseline_top_pt": 115.0,
+        "font": "Lato-Bold",
+        "size_pt": 9.57,
+        "color": "ink",
+        "source": "invoice.invoice_number"
+      },
+      "preview_only_label": {
+        "right_pt": 547.28,
+        "baseline_top_pt": 133.0,
+        "font": "Lato-Bold",
+        "size_pt": 7.7,
+        "color": "muted",
+        "text": "DESIGN PREVIEW  /  NOT ISSUED",
+        "show_only_for_prototype": true
+      },
+      "bottom_rule": {
+        "from_x_pt": 48.0,
+        "to_x_pt": 547.28,
+        "y_pt": 162.0,
+        "stroke_width_pt": 0.8,
+        "color": "hairline"
+      }
+    },
+    "bill_to": {
+      "label": {
+        "left_pt": 48.0,
+        "baseline_top_pt": 197.0,
+        "font": "Lato-Bold",
+        "size_pt": 8.0,
+        "color": "muted",
+        "text": "B I L L  T O"
+      },
+      "customer_name": {
+        "left_pt": 48.0,
+        "baseline_top_pt": 232.0,
+        "font": "Lato-Bold",
+        "size_pt": 17.48,
+        "color": "ink",
+        "source": "invoice.customer.name"
+      },
+      "customer_email": {
+        "left_pt": 48.0,
+        "baseline_top_pt": 256.0,
+        "font": "Lato-Regular",
+        "size_pt": 9.2,
+        "color": "muted",
+        "source": "invoice.customer.email"
+      },
+      "optional_extra_line": {
+        "left_pt": 48.0,
+        "baseline_top_pt": 274.0,
+        "font": "Lato-Regular",
+        "size_pt": 8.7,
+        "color": "muted",
+        "source": "invoice.customer.optional_description"
+      },
+      "separator": {
+        "x_pt": 351.0,
+        "top_pt": 191.0,
+        "bottom_pt": 293.0,
+        "stroke_width_pt": 0.8,
+        "color": "hairline"
+      },
+      "issue_label": {
+        "left_pt": 369.0,
+        "baseline_top_pt": 195.0,
+        "font": "Lato-Bold",
+        "size_pt": 8.0,
+        "color": "muted",
+        "text": "I S S U E  D A T E"
+      },
+      "issue_value": {
+        "left_pt": 369.0,
+        "baseline_top_pt": 219.0,
+        "font": "Lato-Semibold",
+        "size_pt": 9.57,
+        "color": "ink",
+        "source": "invoice.issue_date"
+      },
+      "due_label": {
+        "left_pt": 369.0,
+        "baseline_top_pt": 247.0,
+        "font": "Lato-Bold",
+        "size_pt": 8.0,
+        "color": "muted",
+        "text": "D U E  D A T E"
+      },
+      "due_value": {
+        "left_pt": 369.0,
+        "baseline_top_pt": 271.0,
+        "font": "Lato-Semibold",
+        "size_pt": 9.57,
+        "color": "ink",
+        "source": "invoice.due_date"
+      }
+    },
+    "items": {
+      "section_title": {
+        "left_pt": 48.0,
+        "baseline_top_pt": 312.0,
+        "font": "Lato-Black",
+        "size_pt": 9.0,
+        "color": "ink",
+        "text": "S E R V I C E S  &  F E E S"
+      },
+      "item_count": {
+        "right_pt": 547.28,
+        "baseline_top_pt": 312.0,
+        "font": "Lato-Bold",
+        "size_pt": 8.0,
+        "color": "muted",
+        "source": "len(invoice.items)",
+        "format": "{count:02d} LINE ITEMS"
+      },
+      "section_rule": {
+        "from_x_pt": 48.0,
+        "to_x_pt": 547.28,
+        "y_pt": 325.0,
+        "stroke_width_pt": 1.1,
+        "color": "ink"
+      },
+      "column_header_background": {
+        "left_pt": 48.0,
+        "top_pt": 338.0,
+        "width_pt": 499.28,
+        "height_pt": 28.0,
+        "fill": "table_header"
+      },
+      "column_header_baseline_pt": 356.0,
+      "columns": {
+        "description": {
+          "header_left_pt": 60.0,
+          "text_left_pt": 60.0,
+          "header_font_size_pt": 7.5,
+          "header_text": "DESCRIPTION",
+          "text_font": "Lato-Semibold",
+          "text_font_size_pt": 9.66,
+          "max_text_right_pt": 314.0
+        },
+        "quantity": {
+          "right_pt": 343.0,
+          "header_right_pt": 343.0,
+          "header_text": "QTY",
+          "font": "Lato-Regular",
+          "font_size_pt": 9.2
+        },
+        "rate": {
+          "right_pt": 437.0,
+          "header_right_pt": 437.0,
+          "header_text": "RATE",
+          "font": "Lato-Regular",
+          "font_size_pt": 9.2
+        },
+        "amount": {
+          "right_pt": 535.28,
+          "header_right_pt": 535.28,
+          "header_text": "AMOUNT",
+          "font": "Lato-Semibold",
+          "font_size_pt": 9.2
+        }
+      },
+      "column_header_font": "Lato-Bold",
+      "numeric_header_font_size_pt": 8.0,
+      "first_row_description_baseline_pt": 384.0,
+      "first_row_numbers_baseline_pt": 385.0,
+      "row_height_pt": 47.0,
+      "row_separators": {
+        "first_y_pt": 404.0,
+        "step_pt": 47.0,
+        "from_x_pt": 48.0,
+        "to_x_pt": 547.28,
+        "color": "hairline",
+        "stroke_width_pt": 0.7
+      },
+      "two_row_reference": true
+    },
+    "totals": {
+      "anchor_row_count": 2,
+      "reference_subtotal": {
+        "label": {
+          "right_pt": 416.3,
+          "baseline_top_pt": 480.0,
+          "font": "Lato-Regular",
+          "size_pt": 9.2,
+          "color": "muted"
+        },
+        "value": {
+          "right_pt": 535.28,
+          "baseline_top_pt": 480.0,
+          "font": "Lato-Semibold",
+          "size_pt": 10.12,
+          "color": "ink"
+        }
+      },
+      "total_box": {
+        "left_pt": 322.0,
+        "top_pt": 498.0,
+        "width_pt": 225.28,
+        "height_pt": 60.0,
+        "fill": "total_box",
+        "corner_radius_pt": 12.0
+      },
+      "total_label": {
+        "left_pt": 337.0,
+        "baseline_top_pt": 521.0,
+        "font": "Lato-Bold",
+        "size_pt": 8.0,
+        "color": "ink",
+        "text": "TOTAL DUE"
+      },
+      "total_value": {
+        "right_pt": 532.28,
+        "baseline_top_pt": 545.0,
+        "font": "Lato-Black",
+        "size_pt": 17.85,
+        "color": "ink"
+      },
+      "payment_minimum_gap_after_total_box_pt": 24.89
+    },
+    "payment_details": {
+      "reference_panel": {
+        "left_pt": 48.0,
+        "top_pt": 582.89,
+        "width_pt": 499.28,
+        "height_pt": 138.0,
+        "fill": "payment_box",
+        "corner_radius_pt": 12.0
+      },
+      "heading": {
+        "left_pt": 65.0,
+        "baseline_top_pt": 609.9,
+        "font": "Lato-Black",
+        "size_pt": 9.0,
+        "color": "ink",
+        "text": "P A Y M E N T  D E T A I L S"
+      },
+      "reference": {
+        "right_pt": 530.28,
+        "baseline_top_pt": 609.9,
+        "font": "Lato-Semibold",
+        "size_pt": 8.9,
+        "color": "ink",
+        "prefix": "Reference: ",
+        "source": "invoice.invoice_number"
+      },
+      "horizontal_divider": {
+        "from_x_pt": 65.0,
+        "to_x_pt": 530.28,
+        "y_pt": 621.89,
+        "color": "hairline",
+        "stroke_width_pt": 0.8
+      },
+      "col_1_left_pt": 65.0,
+      "col_2_left_pt": 299.0,
+      "row_1_label_baseline_pt": 644.9,
+      "row_1_value_baseline_pt": 665.9,
+      "row_2_label_baseline_pt": 687.9,
+      "row_2_value_baseline_pt": 708.9,
+      "label_font": "Lato-Bold",
+      "label_size_pt": 7.6,
+      "label_color": "muted",
+      "value_font": "Lato-Semibold",
+      "value_size_pt": 10.12,
+      "value_color": "ink",
+      "account_holder_value_size_pt": 9.38,
+      "fields": {
+        "row_1_col_1": "business.bank_name",
+        "row_1_col_2": "business.account_holder",
+        "row_2_col_1": "business.account_number",
+        "row_2_col_2": "business.branch_code"
+      }
+    },
+    "payment_terms": {
+      "heading": {
+        "left_pt": 48.0,
+        "baseline_top_pt": 743.9,
+        "font": "Lato-Bold",
+        "size_pt": 7.5,
+        "color": "muted",
+        "text": "PAYMENT TERMS"
+      },
+      "text": {
+        "left_pt": 48.0,
+        "baseline_top_pt": 764.9,
+        "font": "Lato-Regular",
+        "size_pt": 8.56,
+        "color": "ink",
+        "source": "payment_terms"
+      }
+    },
+    "footer": {
+      "rule": {
+        "from_x_pt": 48.0,
+        "to_x_pt": 547.28,
+        "y_pt": 777.89,
+        "color": "hairline",
+        "stroke_width_pt": 0.8
+      },
+      "message": {
+        "left_pt": 48.0,
+        "baseline_top_pt": 797.9,
+        "font": "Lato-Semibold",
+        "size_pt": 8.74,
+        "color": "ink",
+        "text": "Thank you for your business."
+      },
+      "page_label": {
+        "right_pt": 547.28,
+        "baseline_top_pt": 797.9,
+        "font": "Lato-Bold",
+        "size_pt": 8.0,
+        "color": "muted",
+        "text_pattern": "EXAMPLE  /  {page:02d}"
+      }
+    }
+  },
+  "implementation_rules": [
+    "Use these values as absolute anchors for a TWO-LINE-ITEM invoice. The approved PDF has 2 lines; do not confuse baseline_top_pt with glyph bounds.",
+    "For each additional item, increase line-item space by row_height_pt (47.0) and push downstream blocks down or page-break cleanly; never blindly overlap footer. For fewer items, maintain sensible whitespace.",
+    "Use text metrics to wrap long descriptions within the description column while avoiding collision with numerical columns. Grow affected rows and reflow following content.",
+    "For dynamic amount strings and customer names, use measured text widths and right alignment, and never shrink everything to fit a single page.",
+    "At the bottom of page 1 with 2 rows, payment panel is 578.89..716.89; payment terms end about y=757; footer rule is y=777.89. With an additional 47pt row, there is no room for all these blocks; continue on the next page rather than overlapping.",
+    "The approved design uses Lato, not Helvetica. Locate or register Lato font files locally (including Semibold and Black weights). Do not share font files in deliverables.",
+    "Fit a supplied logo inside the given 61.6x52.096pt box without stretching it.",
+    "Refinement A uses 0.5pt PDF word spacing for natural multi-word content. Include word spacing in wrapping and right-aligned width calculations; do not apply it to letter-spaced labels, identifiers, email addresses, account numbers, or monetary values.",
+    "Use the supplied business.json and invoice.json values rather than embedding personal/contact/banking details in code or this numeric spec.",
+    "Prototype-only text DESIGN PREVIEW / NOT ISSUED should not appear on production output.",
+    "Do not print TAX INVOICE, VAT or business address in current preview, but do not represent the template as SARS-compliant for taxable sales.",
+    "If a strict two-row design cannot fit long descriptions with exact anchors, retain typography, columns and margins, then grow rows and paginate. Accessibility/readability trumps false pixel-perfect matches."
+  ]
+}

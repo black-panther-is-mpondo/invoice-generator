@@ -1,0 +1,115 @@
+from __future__ import annotations
+
+from pathlib import Path
+
+import nbformat
+import pytest
+from nbclient import NotebookClient
+from pydantic import ValidationError
+from pypdf import PdfReader
+
+from invoice_generator.calculations import calculate_invoice
+from invoice_generator.models import InvoiceConfig
+from invoice_generator.workflow import (
+    PreparedInvoice,
+    generate_invoice,
+    prepare_invoice,
+)
+
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+BUSINESS_EXAMPLE = PROJECT_ROOT / "data" / "business.example.json"
+INVOICE_EXAMPLE = PROJECT_ROOT / "data" / "invoice.example.json"
+NOTEBOOK_PATH = PROJECT_ROOT / "notebooks" / "create_invoice.ipynb"
+
+
+def _prepared_with_number(invoice_number: str) -> PreparedInvoice:
+    prepared = prepare_invoice(BUSINESS_EXAMPLE, INVOICE_EXAMPLE)
+    invoice = prepared.invoice.model_copy(update={"invoice_number": invoice_number})
+    return PreparedInvoice(
+        business=prepared.business,
+        invoice=invoice,
+        calculation=calculate_invoice(invoice),
+    )
+
+
+def test_notebook_is_valid_and_uses_the_workflow() -> None:
+    notebook = nbformat.read(NOTEBOOK_PATH, as_version=4)
+
+    nbformat.validate(notebook)
+    source = "\n".join(cell.source for cell in notebook.cells)
+    assert "prepare_invoice" in source
+    assert "generate_invoice" in source
+    assert "PROJECT_ROOT" in source
+    assert "prototype=False" in source
+
+
+@pytest.mark.filterwarnings(
+    "ignore:Proactor event loop does not implement add_reader family of methods "
+    "required for zmq.*:RuntimeWarning"
+)
+@pytest.mark.parametrize(
+    "working_directory", [PROJECT_ROOT, PROJECT_ROOT / "notebooks"]
+)
+def test_notebook_executes_with_sanitised_configuration(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    working_directory: Path,
+) -> None:
+    monkeypatch.setenv("INVOICE_BUSINESS_PATH", str(BUSINESS_EXAMPLE))
+    monkeypatch.setenv("INVOICE_INVOICE_PATH", str(INVOICE_EXAMPLE))
+    monkeypatch.setenv("INVOICE_OUTPUT_DIR", str(tmp_path))
+    notebook = nbformat.read(NOTEBOOK_PATH, as_version=4)
+
+    NotebookClient(notebook, timeout=120, kernel_name="python3").execute(
+        cwd=working_directory
+    )
+
+    assert (tmp_path / "INV-EXAMPLE-001.pdf").is_file()
+
+
+def test_prepare_invoice_loads_sanitised_configuration() -> None:
+    prepared = prepare_invoice(BUSINESS_EXAMPLE, INVOICE_EXAMPLE)
+
+    assert prepared.invoice.invoice_number == "INV-EXAMPLE-001"
+    assert prepared.calculation.total_payable == prepared.calculation.subtotal
+
+
+def test_workflow_generates_production_pdf_without_preview_labels(
+    tmp_path: Path,
+) -> None:
+    output = generate_invoice(_prepared_with_number("INV-NOTEBOOK-001"), tmp_path)
+    text = "\n".join(page.extract_text() for page in PdfReader(output).pages)
+
+    assert output == tmp_path / "INV-NOTEBOOK-001.pdf"
+    assert "DESIGN PREVIEW" not in text
+    assert "EXAMPLE / 01" not in text
+
+
+def test_prepare_invoice_reports_missing_configuration(tmp_path: Path) -> None:
+    with pytest.raises(FileNotFoundError, match="Configuration file not found"):
+        prepare_invoice(tmp_path / "missing-business.json", INVOICE_EXAMPLE)
+
+
+def test_prepare_invoice_reports_invalid_invoice_data(tmp_path: Path) -> None:
+    invalid_invoice = tmp_path / "invoice.json"
+    invalid_invoice.write_text('{"invoice_number": "INV-001"}', encoding="utf-8")
+
+    with pytest.raises(ValidationError):
+        prepare_invoice(BUSINESS_EXAMPLE, invalid_invoice)
+
+
+def test_workflow_creates_output_directory_and_rejects_conflicts(
+    tmp_path: Path,
+) -> None:
+    prepared = _prepared_with_number("INV-NOTEBOOK-002")
+    output_dir = tmp_path / "nested" / "output"
+    output = generate_invoice(prepared, output_dir)
+
+    assert output.is_file()
+    with pytest.raises(FileExistsError, match="already exists"):
+        generate_invoice(prepared, output_dir)
+
+
+def test_invalid_model_data_remains_rejected() -> None:
+    with pytest.raises(ValidationError):
+        InvoiceConfig.model_validate({"invoice_number": "INV-001"})

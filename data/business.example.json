@@ -1,0 +1,19 @@
+{
+  "business": {
+    "name": "Northstar Creative Works",
+    "logo_path": "assets/example-logo.png",
+    "whatsapp": "+1 555 010 0248",
+    "email": "billing@northstar.example"
+  },
+  "currency": "ZAR",
+  "banking": {
+    "account_holder": "NORTHSTAR CREATIVE WORKS",
+    "bank_name": "Fictional Bank",
+    "account_number": "0000000000",
+    "branch_code": "000000"
+  },
+  "defaults": {
+    "payment_terms": "Please pay by the due date shown on this invoice.",
+    "footer_message": "Thank you for your business."
+  }
+}

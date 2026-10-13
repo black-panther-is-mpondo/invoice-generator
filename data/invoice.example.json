@@ -1,0 +1,24 @@
+{
+  "invoice_number": "INV-EXAMPLE-001",
+  "issue_date": "2026-10-13",
+  "due_date": "2026-10-27",
+  "customer": {
+    "name": "Harbor & Pine Co.",
+    "email": "accounts@harbor-pine.example",
+    "phone": "+1 555 010 0184"
+  },
+  "items": [
+    {
+      "description": "Website design and development services",
+      "quantity": "1",
+      "unit_price": "3500.00"
+    },
+    {
+      "description": "Website maintenance services",
+      "quantity": "2",
+      "unit_price": "500.00"
+    }
+  ],
+  "discount": null,
+  "notes": ""
+}
