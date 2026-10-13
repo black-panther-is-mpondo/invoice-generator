@@ -487,7 +487,7 @@ def _draw_items_heading(
         canvas,
         RIGHT,
         title_top,
-        f"{len(invoice.items):02d} LINE ITEMS",
+        _line_item_count_label(len(invoice.items)),
         FONT_BOLD,
         ITEM_COUNT_SIZE,
         MUTED,
@@ -1117,6 +1117,11 @@ def _wordmark_lines(name: str) -> tuple[str, str]:
 def _format_quantity(quantity: Decimal) -> str:
     rendered = f"{quantity:f}"
     return rendered.rstrip("0").rstrip(".") if "." in rendered else rendered
+
+
+def _line_item_count_label(count: int) -> str:
+    """Format the table count with grammatically correct singular wording."""
+    return f"{count:02d} LINE ITEM" if count == 1 else f"{count:02d} LINE ITEMS"
 
 
 class _ItemRow:

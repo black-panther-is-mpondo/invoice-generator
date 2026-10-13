@@ -29,6 +29,7 @@ from invoice_generator.layout import (
 )
 from invoice_generator.models import BusinessConfig, InvoiceConfig
 from invoice_generator.renderer import (
+    _line_item_count_label,
     _text_width,
     _wrap_description,
     _wrap_notes,
@@ -65,6 +66,11 @@ def test_generates_pdf_with_invoice_customer_and_totals(
     assert "INV-001" in text
     assert "Example Client" in text
     assert "R 100.00" in text
+
+
+def test_formats_singular_and_plural_line_item_labels() -> None:
+    assert _line_item_count_label(1) == "01 LINE ITEM"
+    assert _line_item_count_label(2) == "02 LINE ITEMS"
 
 
 def test_renders_optional_discount(
